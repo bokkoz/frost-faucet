@@ -8,16 +8,18 @@
 <script>
 // Opened in a normal browser (e.g. from FaucetPay)? Send the visitor to the Telegram bot.
 (function () {
-  try {
-    var w = window.Telegram && window.Telegram.WebApp;
-    if (!w || !w.initData) location.replace('https://t.me/frostfaucet_bot');
-  } catch (e) { location.replace('https://t.me/frostfaucet_bot'); }
+  var go = function () {
+    fetch('/api/index?a=config').then(function (r) { return r.json(); })
+      .then(function (c) { location.replace('https://t.me/' + (c.bot || '')); })
+      .catch(function () {});
+  };
+  try { var w = window.Telegram && window.Telegram.WebApp; if (!w || !w.initData) go(); } catch (e) { go(); }
 })();
 </script>
 <style>
   :root {
-    --bg: #070d14; --surface: #0e1823; --surface2: #14212f; --line: #1f3347;
-    --text: #e8f4fb; --muted: #7d97ab; --accent: #5cd6ff; --accent-ink: #04202e;
+    --bg: #08080a; --surface: #131316; --surface2: #1b1b20; --line: #2b2b33;
+    --text: #ececf0; --muted: #8b8b96; --accent: #c9ccd6; --accent-ink: #121216;
     --ok: #5ee6a8; --warn: #ffc857; --bad: #ff6b5e;
     --r: 20px;
   }
@@ -33,7 +35,7 @@
   .top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; }
   .brand { display: flex; align-items: center; gap: 10px; font-weight: 800; letter-spacing: .3px; }
   .drop { width: 30px; height: 30px; border-radius: 10px; display: flex; align-items: center; justify-content: center;
-          background: var(--accent); color: var(--accent-ink); box-shadow: 0 0 0 4px rgba(92,214,255,.14); }
+          background: var(--accent); color: var(--accent-ink); box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 16%, transparent); }
   .drop .flake { width: 70%; height: 70%; }
   .chip { background: var(--surface); border: 1px solid var(--line); border-radius: 999px; padding: 8px 14px;
           font-size: 14px; font-weight: 700; }
@@ -115,7 +117,7 @@
 
   /* tab bar */
   .tabs { position: fixed; left: 0; right: 0; bottom: 0; padding: 10px 16px calc(10px + env(safe-area-inset-bottom));
-          background: rgba(7,13,20,.92); backdrop-filter: blur(12px); border-top: 1px solid var(--line); }
+          background: color-mix(in srgb, var(--bg) 92%, transparent); backdrop-filter: blur(12px); border-top: 1px solid var(--line); }
   .tabs div { max-width: 480px; margin: 0 auto; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
   .tab { border: 0; background: transparent; color: var(--muted); font-size: 14px; font-weight: 800; padding: 12px; border-radius: 14px; cursor: pointer; }
   .tab.on { background: var(--surface2); color: var(--accent); }
@@ -124,7 +126,7 @@
   .modal .box { background: var(--surface); border: 1px solid var(--line); border-radius: 22px; padding: 22px; width: 100%; max-width: 360px; text-align: center; }
   .modal .q { font-size: 34px; font-weight: 800; margin: 10px 0 14px; color: var(--accent); }
   #toast { position: fixed; left: 50%; top: 18px; transform: translate(-50%, -140%); transition: transform .3s;
-           background: var(--text); color: #070d14; padding: 12px 18px; border-radius: 14px; font-weight: 800; font-size: 14px; z-index: 9; max-width: 90%; text-align: center; }
+           background: var(--text); color: var(--bg); padding: 12px 18px; border-radius: 14px; font-weight: 800; font-size: 14px; z-index: 9; max-width: 90%; text-align: center; }
   #toast.show { transform: translate(-50%, 0); }
 </style>
 </head>
@@ -141,12 +143,12 @@
 </div></div>
 
 <!-- LOADING -->
-<div class="wrap" id="vLoad"><div class="hero"><div class="drop"><svg class="flake" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M3.3 7l17.4 10M3.3 17L20.7 7M9 3.5l3 2.5 3-2.5M9 20.5l3-2.5 3 2.5M2.5 10.2l3.6.2-.9-3.5M21.5 13.8l-3.6-.2.9 3.5M2.5 13.8l3.6-.2-.9 3.5M21.5 10.2l-3.6.2.9-3.5"/></svg></div><p>Loading…</p></div></div>
+<div class="wrap" id="vLoad"><div class="hero"><div class="drop"><svg class="flake" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></svg></div><p>Loading…</p></div></div>
 
 <!-- LOGIN -->
 <div class="wrap hide" id="vLogin">
   <div class="hero">
-    <div class="drop"><svg class="flake" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M3.3 7l17.4 10M3.3 17L20.7 7M9 3.5l3 2.5 3-2.5M9 20.5l3-2.5 3 2.5M2.5 10.2l3.6.2-.9-3.5M21.5 13.8l-3.6-.2.9 3.5M2.5 13.8l3.6-.2-.9 3.5M21.5 10.2l-3.6.2.9-3.5"/></svg></div>
+    <div class="drop"><svg class="flake" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></svg></div>
     <h1>Sign in with<br>FaucetPay</h1>
     <p>Earn USDT for every ad you watch. Payouts go straight to your FaucetPay wallet.</p>
   </div>
@@ -164,7 +166,7 @@
 <!-- APP -->
 <div class="wrap hide" id="vApp">
   <div class="top">
-    <div class="brand"><div class="drop"><svg class="flake" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M3.3 7l17.4 10M3.3 17L20.7 7M9 3.5l3 2.5 3-2.5M9 20.5l3-2.5 3 2.5M2.5 10.2l3.6.2-.9-3.5M21.5 13.8l-3.6-.2.9 3.5M2.5 13.8l3.6-.2-.9 3.5M21.5 10.2l-3.6.2.9-3.5"/></svg></div>Frost</div>
+    <div class="brand"><div class="drop"><svg class="flake" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></svg></div><span id="brandName">Frost</span></div>
     <div class="chip mono" id="chipBal">0.0000<small>USDT</small></div>
   </div>
 
@@ -243,7 +245,16 @@
 <script>
 const tg = window.Telegram.WebApp;
 tg.ready(); tg.expand();
-try { tg.setHeaderColor('#070d14'); tg.setBackgroundColor('#070d14'); } catch (e) {}
+const applyTheme = (t, brand) => {
+  if (!t) return;
+  const r = document.documentElement.style;
+  r.setProperty('--bg', t.bg); r.setProperty('--surface', t.surface); r.setProperty('--surface2', t.surface2); r.setProperty('--line', t.line);
+  r.setProperty('--text', t.text); r.setProperty('--muted', t.muted); r.setProperty('--accent', t.accent); r.setProperty('--accent-ink', t.ink);
+  document.querySelectorAll('.drop .flake').forEach((el) => { el.innerHTML = t.iconSvg || ''; });
+  const bn = document.getElementById('brandName'); if (bn) bn.textContent = brand || t.brand;
+  document.title = (brand || t.brand) + ' · USDT Faucet';
+  try { tg.setHeaderColor(t.bg); tg.setBackgroundColor(t.bg); } catch (e) {}
+};
 
 const $ = (id) => document.getElementById(id);
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -742,7 +753,7 @@ $('taskList').onclick = async (e) => {
 (async () => {
   // Load ad settings first. Without them nobody gets a reward.
   for (let i = 0; i < 3 && !(cfg.adZone || cfg.adsOff === true); i++) {
-    try { const r = await api('config'); if (r.data && (r.data.adZone || r.data.adsOff === true)) cfg = r.data; } catch (e) {}
+    try { const r = await api('config'); if (r.data && (r.data.adZone || r.data.adsOff === true)) cfg = r.data; applyTheme(r.data && r.data.theme, r.data && r.data.brand); } catch (e) {}
     if (!(cfg.adZone || cfg.adsOff === true)) await sleep(800);
   }
   await load();

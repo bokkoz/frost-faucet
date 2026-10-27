@@ -5,6 +5,24 @@ const db = require('./db');
 const MICRO = 1000000;
 const env = (k, d) => (process.env[k] === undefined || process.env[k] === '' ? d : process.env[k]);
 const envNum = (k, d) => { const v = Number(env(k, d)); return Number.isFinite(v) ? v : d; };
+
+const ICONS = {
+  flake: '<path d="M12 2v20M3.3 7l17.4 10M3.3 17L20.7 7M9 3.5l3 2.5 3-2.5M9 20.5l3-2.5 3 2.5M2.5 10.2l3.6.2-.9-3.5M21.5 13.8l-3.6-.2.9 3.5M2.5 13.8l3.6-.2-.9 3.5M21.5 10.2l-3.6.2.9-3.5"/>',
+  bolt: '<path d="M13 2L4 14h7l-1 8 9-12h-7z"/>',
+  wave: '<path d="M2 8c2.5 0 2.5-2 5-2s2.5 2 5 2 2.5-2 5-2 2.5 2 5 2M2 13c2.5 0 2.5-2 5-2s2.5 2 5 2 2.5-2 5-2 2.5 2 5 2M2 18c2.5 0 2.5-2 5-2s2.5 2 5 2 2.5-2 5-2 2.5 2 5 2"/>',
+  moon: '<path d="M20 14.5A8.5 8.5 0 1 1 9.5 4a7 7 0 0 0 10.5 10.5z"/>',
+  storm: '<path d="M17 18a4 4 0 0 0 .5-7.97A6 6 0 0 0 6 9a4.5 4.5 0 0 0 .5 9"/><path d="M12 11l-3 5h4l-2 4"/>',
+};
+// One code base, many faucets: pick a look with THEME=frost|neon|storm|ocean|shadow
+const THEMES = {
+  frost:  { brand: 'Frost',  bot: 'frostfaucet_bot',  emoji: '❄️', icon: 'flake', bg: '#070d14', surface: '#0e1823', surface2: '#14212f', line: '#1f3347', text: '#e8f4fb', muted: '#7d97ab', accent: '#5cd6ff', ink: '#04202e' },
+  neon:   { brand: 'Neon',   bot: 'neonfaucet_bot',   emoji: '⚡', icon: 'bolt',  bg: '#0d0710', surface: '#1a0f1f', surface2: '#24142b', line: '#3a2145', text: '#fbeaf6', muted: '#a487a0', accent: '#ff3fb4', ink: '#2a0220' },
+  storm:  { brand: 'Storm',  bot: 'stormfaucet_bot',  emoji: '⛈', icon: 'storm', bg: '#0c0d10', surface: '#16181d', surface2: '#1f2229', line: '#30343d', text: '#f3f1e6', muted: '#8c8f98', accent: '#ffd21f', ink: '#231b00' },
+  ocean:  { brand: 'Ocean',  bot: 'oceanfaucet_bot',  emoji: '🌊', icon: 'wave',  bg: '#05121a', surface: '#0a1f2b', surface2: '#0f2a39', line: '#17415a', text: '#e6f7f8', muted: '#78a3aa', accent: '#1fd1c1', ink: '#032a27' },
+  shadow: { brand: 'Shadow', bot: 'shadowfaucet_bot', emoji: '🌑', icon: 'moon',  bg: '#08080a', surface: '#131316', surface2: '#1b1b20', line: '#2b2b33', text: '#ececf0', muted: '#8b8b96', accent: '#c9ccd6', ink: '#121216' },
+};
+const themeName = () => (THEMES[String(env('THEME', 'frost')).toLowerCase()] ? String(env('THEME', 'frost')).toLowerCase() : 'frost');
+const theme = () => THEMES[themeName()];
 const cfg = {
   botToken: () => env('BOT_TOKEN', ''),
   faucetpayKey: () => env('FAUCETPAY_KEY', ''),
@@ -26,8 +44,10 @@ const cfg = {
   sdkSrc: () => env('MONETAG_SDK_SRC', 'https://libtl.com/sdk.js'),
   ownerUsername: () => env('OWNER_USERNAME', 'Ratha123z'),
   ownerId: () => env('OWNER_ID', ''),
-  brand: () => env('BRAND', 'Frost'),
-  botUsername: () => env('BOT_USERNAME', 'frostfaucet_bot'),
+  brand: () => env('BRAND', theme().brand),
+  emoji: () => theme().emoji,
+  botUsername: () => env('BOT_USERNAME', theme().bot),
+  themeData: () => ({ ...theme(), iconSvg: ICONS[theme().icon], name: themeName() }),
   siteUrl: () => env('SITE_URL', process.env.VERCEL_PROJECT_PRODUCTION_URL ? 'https://' + process.env.VERCEL_PROJECT_PRODUCTION_URL : ''),
   webhookSecret: () => env('WEBHOOK_SECRET', ''),
 };

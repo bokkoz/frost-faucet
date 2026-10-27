@@ -1,0 +1,752 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>Frost · USDT Faucet</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<script>
+// Opened in a normal browser (e.g. from FaucetPay)? Send the visitor to the Telegram bot.
+(function () {
+  try {
+    var w = window.Telegram && window.Telegram.WebApp;
+    if (!w || !w.initData) location.replace('https://t.me/frostfaucet_bot');
+  } catch (e) { location.replace('https://t.me/frostfaucet_bot'); }
+})();
+</script>
+<style>
+  :root {
+    --bg: #070d14; --surface: #0e1823; --surface2: #14212f; --line: #1f3347;
+    --text: #e8f4fb; --muted: #7d97ab; --accent: #5cd6ff; --accent-ink: #04202e;
+    --ok: #5ee6a8; --warn: #ffc857; --bad: #ff6b5e;
+    --r: 20px;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; background: var(--bg); color: var(--text); }
+  body { font-family: ui-rounded, "SF Pro Rounded", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+         min-height: 100vh; padding-bottom: 92px; }
+  .hide { display: none !important; }
+  .wrap { max-width: 480px; margin: 0 auto; padding: 18px 16px 0; }
+  .mono { font-variant-numeric: tabular-nums; }
+
+  /* top bar */
+  .top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; }
+  .brand { display: flex; align-items: center; gap: 10px; font-weight: 800; letter-spacing: .3px; }
+  .drop { width: 30px; height: 30px; border-radius: 10px; display: flex; align-items: center; justify-content: center;
+          background: var(--accent); color: var(--accent-ink); box-shadow: 0 0 0 4px rgba(92,214,255,.14); }
+  .drop .flake { width: 70%; height: 70%; }
+  .chip { background: var(--surface); border: 1px solid var(--line); border-radius: 999px; padding: 8px 14px;
+          font-size: 14px; font-weight: 700; }
+  .chip small { color: var(--muted); font-weight: 600; margin-left: 4px; }
+
+  /* generic */
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 18px; margin-bottom: 14px; }
+  h2 { margin: 0 0 6px; font-size: 22px; }
+  p.sub { margin: 0 0 16px; color: var(--muted); font-size: 14px; line-height: 1.5; }
+  .btn { width: 100%; border: 0; border-radius: 16px; padding: 16px; font-size: 16px; font-weight: 800;
+         background: var(--accent); color: var(--accent-ink); cursor: pointer; transition: transform .08s, opacity .2s; }
+  .btn:active { transform: scale(.98); }
+  .btn:disabled { opacity: .4; }
+  .btn.ghost { background: var(--surface2); color: var(--text); border: 1px solid var(--line); }
+  input { width: 100%; padding: 15px 16px; border-radius: 14px; border: 1px solid var(--line);
+          background: var(--surface2); color: var(--text); font-size: 16px; margin-bottom: 12px; outline: none; }
+  input:focus { border-color: var(--accent); }
+  .err { color: var(--bad); font-size: 14px; min-height: 18px; margin: 2px 0 10px; }
+
+  /* login */
+  .hero { text-align: center; padding: 34px 6px 22px; }
+  .hero .drop { width: 64px; height: 64px; margin: 0 auto 26px; border-radius: 20px; }
+  .hero h1 { margin: 0 0 8px; font-size: 30px; line-height: 1.1; }
+  .hero p { margin: 0; color: var(--muted); line-height: 1.5; }
+  .steps { display: flex; flex-direction: column; gap: 10px; margin: 18px 0 4px; color: var(--muted); font-size: 13px; }
+  .steps b { color: var(--text); }
+  .note { font-size: 12px; color: var(--muted); line-height: 1.5; margin-top: 12px; }
+  .note a { color: var(--accent); text-decoration: none; }
+
+  /* claim ring */
+  .ringbox { position: relative; width: 230px; height: 230px; margin: 6px auto 18px; }
+  .ringbox svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+  .ringbox .track { stroke: var(--surface2); }
+  .ringbox .prog { stroke: var(--accent); stroke-linecap: round; transition: stroke-dashoffset .6s cubic-bezier(.2,.8,.2,1); }
+  .ringmid { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+  .ringmid .n { font-size: 52px; font-weight: 800; line-height: 1; }
+  .ringmid .of { color: var(--muted); font-size: 14px; margin-top: 6px; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 14px; }
+  .stat { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 14px; }
+  .stat small { color: var(--muted); font-size: 12px; display: block; margin-bottom: 6px; }
+  .stat b { font-size: 18px; }
+  .msg { text-align: center; min-height: 20px; margin-top: 12px; font-size: 14px; color: var(--muted); }
+
+  /* wallet */
+  .bigbal { font-size: 40px; font-weight: 800; margin: 4px 0 2px; }
+  .bigbal span { font-size: 16px; color: var(--accent); margin-left: 6px; }
+  .dest { display: flex; align-items: center; gap: 10px; background: var(--surface2); border: 1px solid var(--line);
+          border-radius: 14px; padding: 12px 14px; margin: 14px 0; font-size: 14px; word-break: break-all; }
+  .dest i { font-style: normal; font-size: 12px; color: var(--muted); display: block; }
+  .row { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--line); font-size: 14px; }
+  .row:last-child { border-bottom: 0; }
+  .pill { font-size: 12px; font-weight: 800; padding: 4px 10px; border-radius: 999px; }
+  .pill.paid { background: rgba(94,230,168,.14); color: var(--ok); }
+  .pill.processing { background: rgba(255,200,87,.14); color: var(--warn); }
+  .pill.failed { background: rgba(255,107,94,.14); color: var(--bad); }
+  .task { display: flex; align-items: center; gap: 12px; padding: 14px 0; border-bottom: 1px solid var(--line); }
+  .task:last-child { border-bottom: 0; }
+  .task .ti { flex: 1; min-width: 0; }
+  .task .ti b { display: block; font-size: 15px; }
+  .task .ti span { display: block; font-size: 12px; color: var(--muted); margin-top: 3px; }
+  .task .rw { font-size: 12px; font-weight: 800; color: var(--accent); margin-top: 6px; display: block; }
+  .task button { width: auto; min-width: 104px; padding: 11px 14px; font-size: 13px; }
+  .seg { display: flex; gap: 6px; overflow-x: auto; margin-bottom: 14px; }
+  .seg button { flex: 1; white-space: nowrap; border: 1px solid var(--line); background: var(--surface); color: var(--muted); font-weight: 800; font-size: 13px; padding: 10px 12px; border-radius: 12px; cursor: pointer; }
+  .seg button.on { background: var(--surface2); color: var(--accent); }
+  .kv { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .kv div { background: var(--surface2); border: 1px solid var(--line); border-radius: 14px; padding: 12px; }
+  .kv small { display: block; color: var(--muted); font-size: 11px; margin-bottom: 4px; }
+  .kv b { font-size: 16px; word-break: break-all; }
+  .code { font-size: 30px; font-weight: 800; letter-spacing: 3px; color: var(--accent); text-align: center; margin: 8px 0; word-break: break-all; }
+  .sm { padding: 9px 12px !important; font-size: 13px !important; width: auto !important; border-radius: 12px !important; }
+  .urow { padding: 12px 0; border-bottom: 1px solid var(--line); cursor: pointer; }
+  .urow:last-child { border-bottom: 0; }
+  .urow .l1 { display: flex; justify-content: space-between; gap: 8px; font-size: 14px; font-weight: 700; }
+  .urow .l2 { color: var(--muted); font-size: 12px; margin-top: 3px; word-break: break-all; }
+  .sw { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; font-size: 14px; border-bottom: 1px solid var(--line); }
+  .sw:last-child { border-bottom: 0; }
+  .empty { color: var(--muted); font-size: 14px; text-align: center; padding: 14px 0 4px; }
+
+  /* tab bar */
+  .tabs { position: fixed; left: 0; right: 0; bottom: 0; padding: 10px 16px calc(10px + env(safe-area-inset-bottom));
+          background: rgba(7,13,20,.92); backdrop-filter: blur(12px); border-top: 1px solid var(--line); }
+  .tabs div { max-width: 480px; margin: 0 auto; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+  .tab { border: 0; background: transparent; color: var(--muted); font-size: 14px; font-weight: 800; padding: 12px; border-radius: 14px; cursor: pointer; }
+  .tab.on { background: var(--surface2); color: var(--accent); }
+
+  .modal { position: fixed; inset: 0; background: rgba(0,0,0,.7); display: flex; align-items: center; justify-content: center; padding: 20px; z-index: 20; }
+  .modal .box { background: var(--surface); border: 1px solid var(--line); border-radius: 22px; padding: 22px; width: 100%; max-width: 360px; text-align: center; }
+  .modal .q { font-size: 34px; font-weight: 800; margin: 10px 0 14px; color: var(--accent); }
+  #toast { position: fixed; left: 50%; top: 18px; transform: translate(-50%, -140%); transition: transform .3s;
+           background: var(--text); color: #070d14; padding: 12px 18px; border-radius: 14px; font-weight: 800; font-size: 14px; z-index: 9; max-width: 90%; text-align: center; }
+  #toast.show { transform: translate(-50%, 0); }
+</style>
+</head>
+<body>
+<div id="toast"></div>
+
+<div class="modal hide" id="capModal"><div class="box">
+  <h2 style="font-size:18px">Quick check</h2>
+  <p class="sub" style="margin-bottom:0">Solve this to continue</p>
+  <div class="q mono" id="capQ">3 + 4</div>
+  <input id="capA" type="text" inputmode="numeric" autocomplete="off" placeholder="Answer" style="text-align:center">
+  <button class="btn" id="capGo">Continue</button>
+  <button class="btn ghost" id="capNo" style="margin-top:10px">Cancel</button>
+</div></div>
+
+<!-- LOADING -->
+<div class="wrap" id="vLoad"><div class="hero"><div class="drop"><svg class="flake" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M3.3 7l17.4 10M3.3 17L20.7 7M9 3.5l3 2.5 3-2.5M9 20.5l3-2.5 3 2.5M2.5 10.2l3.6.2-.9-3.5M21.5 13.8l-3.6-.2.9 3.5M2.5 13.8l3.6-.2-.9 3.5M21.5 10.2l-3.6.2.9-3.5"/></svg></div><p>Loading…</p></div></div>
+
+<!-- LOGIN -->
+<div class="wrap hide" id="vLogin">
+  <div class="hero">
+    <div class="drop"><svg class="flake" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M3.3 7l17.4 10M3.3 17L20.7 7M9 3.5l3 2.5 3-2.5M9 20.5l3-2.5 3 2.5M2.5 10.2l3.6.2-.9-3.5M21.5 13.8l-3.6-.2.9 3.5M2.5 13.8l3.6-.2-.9 3.5M21.5 10.2l-3.6.2.9-3.5"/></svg></div>
+    <h1>Sign in with<br>FaucetPay</h1>
+    <p>Earn USDT for every ad you watch. Payouts go straight to your FaucetPay wallet.</p>
+  </div>
+  <div class="card">
+    <input id="email" type="email" inputmode="email" autocomplete="email" placeholder="Your FaucetPay email">
+    <div class="err" id="loginErr"></div>
+    <button class="btn" id="loginBtn">Verify &amp; continue</button>
+    <div class="note">
+      We check that this email has a FaucetPay account. It is linked to your Telegram account
+      <b>permanently</b>, so double-check it. No FaucetPay account? <a href="https://faucetpay.io/page/user-admin/register" target="_blank" rel="noopener">Create one free</a>.
+    </div>
+  </div>
+</div>
+
+<!-- APP -->
+<div class="wrap hide" id="vApp">
+  <div class="top">
+    <div class="brand"><div class="drop"><svg class="flake" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M3.3 7l17.4 10M3.3 17L20.7 7M9 3.5l3 2.5 3-2.5M9 20.5l3-2.5 3 2.5M2.5 10.2l3.6.2-.9-3.5M21.5 13.8l-3.6-.2.9 3.5M2.5 13.8l3.6-.2-.9 3.5M21.5 10.2l-3.6.2.9-3.5"/></svg></div>Frost</div>
+    <div class="chip mono" id="chipBal">0.0000<small>USDT</small></div>
+  </div>
+
+  <section id="pClaim">
+    <div class="ringbox">
+      <svg viewBox="0 0 200 200">
+        <circle class="track" cx="100" cy="100" r="86" fill="none" stroke-width="12"/>
+        <circle class="prog" id="ring" cx="100" cy="100" r="86" fill="none" stroke-width="12" stroke-dasharray="540.35" stroke-dashoffset="540.35"/>
+      </svg>
+      <div class="ringmid"><div class="n mono" id="ringN">0</div><div class="of" id="ringOf">of 30 today</div></div>
+    </div>
+    <button class="btn" id="claimBtn">Watch ad</button>
+    <div class="msg" id="msg"></div>
+    <div class="grid2" style="margin-top:14px">
+      <div class="stat"><small>Per claim</small><b class="mono" id="sPer">0.0004</b></div>
+      <div class="stat"><small>Total earned</small><b class="mono" id="sTot">0.0000</b></div>
+    </div>
+    <div class="card">
+      <h2 style="font-size:17px;margin-bottom:4px">Have a coupon?</h2>
+      <p class="sub" style="margin-bottom:10px">Codes are shared in our channel and expire after 24 hours.</p>
+      <div style="display:flex;gap:8px"><input id="cpIn" type="text" autocomplete="off" autocapitalize="characters" placeholder="Enter code" style="text-transform:uppercase"><button class="btn sm" id="cpBtn" style="min-width:96px">Redeem</button></div>
+    </div>
+  </section>
+
+  <section id="pTasks" class="hide">
+    <div class="card">
+      <h2 style="font-size:17px;margin-bottom:4px">Tasks</h2>
+      <p class="sub" style="margin-bottom:6px">Open the link, stay about 30 seconds, then come back and claim.</p>
+      <div id="taskList"><div class="empty">Loading…</div></div>
+    </div>
+  </section>
+
+  <section id="pBonus" class="hide">
+    <div class="card">
+      <h2 style="font-size:17px;margin-bottom:4px">Bonus offer</h2>
+      <p class="sub" style="margin-bottom:12px">Tap the button. An offer page opens. Stay a few seconds, then come back to get your bonus.</p>
+      <button class="btn" id="bonusBtn" disabled>Preparing…</button>
+      <div class="msg" id="bonusMsg"></div>
+      <div class="grid2" style="margin-top:14px">
+        <div class="stat"><small>Per offer</small><b class="mono" id="bPer">0.0000</b></div>
+        <div class="stat"><small>Left today</small><b class="mono" id="bLeft">0</b></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="pOwner" class="hide">
+    <div class="seg" id="oSeg">
+      <button data-o="stats" class="on">Stats</button><button data-o="users">Users</button><button data-o="coupons">Coupons</button><button data-o="payouts">Payouts</button><button data-o="message">Message</button>
+    </div>
+    <div id="oBody"></div>
+  </section>
+
+  <section id="pWallet" class="hide">
+    <div class="card">
+      <small style="color:var(--muted)">Available balance</small>
+      <div class="bigbal mono"><span id="wBal" style="color:var(--text);font-size:40px;margin:0">0.0000</span><span>USDT</span></div>
+      <div class="dest"><div><i>Pays out to</i><span id="wDest">—</span></div></div>
+      <button class="btn" id="wdBtn">Withdraw</button>
+      <div class="note" id="wNote"></div>
+    </div>
+    <div class="card">
+      <h2 style="font-size:17px;margin-bottom:4px">Payouts</h2>
+      <div id="hist"></div>
+    </div>
+  </section>
+</div>
+
+<div class="tabs hide" id="tabs"><div>
+  <button class="tab on" data-t="pClaim">Earn</button>
+  <button class="tab hide" data-t="pTasks" id="tabTasks">Tasks</button>
+  <button class="tab hide" data-t="pBonus" id="tabBonus">Bonus</button>
+  <button class="tab" data-t="pWallet">Wallet</button>
+  <button class="tab hide" data-t="pOwner" id="tabOwner">Owner</button>
+</div></div>
+
+<script>
+const tg = window.Telegram.WebApp;
+tg.ready(); tg.expand();
+try { tg.setHeaderColor('#070d14'); tg.setBackgroundColor('#070d14'); } catch (e) {}
+
+const $ = (id) => document.getElementById(id);
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+const raw = async (action, method, body) => {
+  try {
+    const r = await fetch('/api/index?a=' + action, {
+      method,
+      headers: { 'Content-Type': 'application/json', 'X-Init-Data': tg.initData || '' },
+      body: body ? JSON.stringify(body) : undefined,
+    });
+    const t = await r.text();
+    let d = null; try { d = JSON.parse(t); } catch (e) {}
+    return { status: r.status, data: d || {} };
+  } catch (e) { return { status: 0, data: {} }; }
+};
+const api = async (action, method = 'GET', body) => {
+  return raw(action, method, body);
+};
+let toastT;
+const toast = (t) => { const el = $('toast'); el.textContent = t; el.classList.add('show'); clearTimeout(toastT); toastT = setTimeout(() => el.classList.remove('show'), 2600); };
+
+let cfg = {}, st = null, busy = false, timer = null, isOwner = false;
+const CIRC = 540.35;
+
+function show(view) {
+  for (const v of ['vLoad', 'vLogin', 'vApp']) $(v).classList.toggle('hide', v !== view);
+  $('tabs').classList.toggle('hide', view !== 'vApp');
+}
+
+function render() {
+  if (!st) return;
+  if (!st.registered) { show('vLogin'); return; }
+  show('vApp');
+  $('chipBal').innerHTML = `${st.balance}<small>USDT</small>`;
+  $('ringN').textContent = st.claimsToday;
+  const unl = st.dailyLimit === 0;
+  $('ringOf').textContent = unl ? 'claims today' : `of ${st.dailyLimit} today`;
+  $('ring').style.strokeDashoffset = unl ? 0 : CIRC * (1 - Math.min(1, st.claimsToday / st.dailyLimit));
+  $('sPer').textContent = st.claimAmount;
+  $('sTot').textContent = st.totalEarned;
+  $('wBal').textContent = st.balance;
+  $('wDest').textContent = st.email;
+  $('wNote').textContent = `Minimum ${st.minWithdraw} USDT. Sent instantly to your FaucetPay account.`;
+  $('wdBtn').disabled = parseFloat(st.balance) < parseFloat(st.minWithdraw);
+  $('hist').innerHTML = st.withdrawals.length
+    ? st.withdrawals.map((w) => `<div class="row"><span class="mono">#${w.id} · ${w.amount} USDT</span><span class="pill ${w.status}">${w.status}</span></div>`).join('')
+    : '<div class="empty">No payouts yet</div>';
+  updateBtn();
+  updateBonus();
+}
+
+function updateBtn() {
+  const b = $('claimBtn');
+  clearInterval(timer);
+  if (st.dailyLimit > 0 && st.claimsToday >= st.dailyLimit) { b.disabled = true; b.textContent = 'Daily limit reached · back tomorrow'; return; }
+  if (st.cooldown > 0) {
+    let left = st.cooldown; b.disabled = true;
+    const tick = () => {
+      b.textContent = `Next claim in ${left}s`;
+      if (left-- <= 0) { clearInterval(timer); b.disabled = busy; b.textContent = `Watch ad · +${st.claimAmount} USDT`; }
+    };
+    tick(); timer = setInterval(tick, 1000); return;
+  }
+  b.disabled = busy; b.textContent = `Watch ad · +${st.claimAmount} USDT`;
+}
+
+async function load() {
+  const r = await api('me');
+  if (r.status === 403 && r.data.error === 'banned') { show('vLoad'); document.querySelector('#vLoad p').textContent = 'This account has been suspended.'; return; }
+  if (r.status === 200) { st = r.data; isOwner = !!r.data.owner; render(); setTabs(); startInApp(); }
+  else { show('vLoad'); document.querySelector('#vLoad p').textContent = 'Could not load. Close and reopen the app from Telegram.'; }
+}
+
+/* ---- login ---- */
+$('loginBtn').onclick = async () => {
+  const email = $('email').value.trim();
+  $('loginErr').textContent = '';
+  if (!/^\S+@\S+\.\S+$/.test(email)) { $('loginErr').textContent = 'Enter a valid email address.'; return; }
+  $('loginBtn').disabled = true; $('loginBtn').textContent = 'Checking FaucetPay…';
+  const r = await api('register', 'POST', { email });
+  $('loginBtn').disabled = false; $('loginBtn').textContent = 'Verify & continue';
+  if (r.data.ok) { st = r.data; render(); toast('Signed in ✓'); tg.HapticFeedback?.notificationOccurred('success'); return; }
+  if (r.data.registered) { st = r.data; render(); return; }
+  $('loginErr').textContent = {
+    bad_email: 'That email does not look right.',
+    not_faucetpay: 'No FaucetPay account found for this email. Register at faucetpay.io first.',
+    email_taken: 'This email is already linked to another Telegram account.',
+    check_unavailable: 'Could not reach FaucetPay right now. Try again in a minute.',
+    already: 'This account is already signed in.',
+    ip_limit: 'Too many accounts from this connection.',
+  }[r.data.error] || ('Something went wrong (' + (r.data.detail || r.data.error || 'HTTP ' + r.status) + ')');
+};
+
+/* ---- ads + claim ---- */
+let inappOn = false;
+async function startInApp() {
+  if (inappOn || !cfg.inapp || !cfg.adZone || !st || !st.registered) return;
+  inappOn = true;
+  try {
+    await loadSdk();
+    const fn = window['show_' + cfg.adZone];
+    if (typeof fn === 'function') await fn({ type: 'inApp', inAppSettings: { frequency: 2, capping: 0.1, interval: 30, timeout: 5, everyPage: false } });
+  } catch (e) { /* ads are optional, never block the app */ }
+}
+
+function askCaptcha(q) {
+  return new Promise((res) => {
+    $('capQ').textContent = q + ' = ?'; $('capA').value = '';
+    $('capModal').classList.remove('hide'); $('capA').focus();
+    const done = (v) => { $('capModal').classList.add('hide'); $('capGo').onclick = $('capNo').onclick = null; res(v); };
+    $('capGo').onclick = () => done($('capA').value.trim() || null);
+    $('capNo').onclick = () => done(null);
+  });
+}
+
+let adReady = null;
+function loadSdk() {
+  if (adReady) return adReady;
+  adReady = new Promise((res, rej) => {
+    const s = document.createElement('script');
+    s.src = cfg.adSrc; s.dataset.zone = cfg.adZone; s.dataset.sdk = 'show_' + cfg.adZone;
+    s.onload = () => res(); s.onerror = () => { adReady = null; rej(new Error('sdk')); };
+    document.head.appendChild(s);
+  });
+  return adReady;
+}
+// Returns true only when a full ad was really watched. Otherwise returns a short reason text (no reward).
+async function showAd() {
+  if (cfg.adsOff === true) return true; // the server says no ad zone is set up (testing only)
+  if (!cfg.adZone || !cfg.adSrc) return 'Ads did not load. Close and reopen the app.';
+  try {
+    await loadSdk();
+    const fn = window['show_' + cfg.adZone];
+    if (typeof fn !== 'function') return 'Ad is not ready. Try again.';
+    const uid = tg.initDataUnsafe?.user?.id;
+    const t0 = Date.now();
+    const res = await fn(uid ? { ymid: String(uid) } : undefined);
+    if (res?.reward_event_type !== 'valued') return 'Ad was not completed. Please watch the full ad.';
+    if (Date.now() - t0 < 3000) return 'Ad was too short. Try again.'; // a real ad takes longer than this
+    return true;
+  } catch (e) {
+    return 'No ad available right now' + (e && e.message ? ' (' + e.message + ')' : '') + '. Try again soon.';
+  }
+}
+
+$('claimBtn').onclick = async () => {
+  if (busy) return;
+  busy = true; $('claimBtn').disabled = true; $('msg').textContent = '';
+
+  const s = await api('ad_start', 'POST');
+  if (!s.data.token) {
+    busy = false;
+    if (s.data.error === 'not_registered' || s.data.error === 'banned') { await load(); return; }
+    if (s.data.balance) { st = s.data; render(); } else updateBtn();
+    $('msg').textContent = { daily_limit: 'Daily limit reached.', cooldown: 'Please wait a moment.', paused: 'Claims are paused for a moment. Try again soon.' }[s.data.error] || 'Could not start. Try again.';
+    return;
+  }
+  let captcha;
+  if (s.data.captcha) {
+    captcha = await askCaptcha(s.data.captcha);
+    if (!captcha) { busy = false; updateBtn(); return; }
+  }
+  const ok = await showAd();
+  if (ok !== true) { $('msg').textContent = ok; busy = false; updateBtn(); return; }
+
+  let r;
+  for (let i = 0; i < 8; i++) {
+    r = await api('claim', 'POST', { token: s.data.token, captcha });
+    if (r.data.error !== 'too_fast') break;
+    await sleep(1500);
+  }
+  busy = false;
+  if (r.data.ok) {
+    st = r.data; render(); toast(`+${st.claimAmount} USDT`); tg.HapticFeedback?.notificationOccurred('success');
+  } else {
+    const e = { daily_limit: 'Daily limit reached.', cooldown: 'Please wait a moment.', too_fast: 'Ad was too short. Try again.', no_session: 'Session expired. Try again.', expired: 'Session expired. Try again.', bad_captcha: 'Wrong answer. Try again.' };
+    $('msg').textContent = e[r.data.error] || 'Claim failed.';
+    if (r.data.balance) { st = r.data; render(); } else updateBtn();
+  }
+};
+
+/* ---- bonus offer (Rewarded Popup) ---- */
+let bonusTok = null, bonusPrepping = false;
+function updateBonus() {
+  if (!st || !st.bonus) return;
+  const b = $('bonusBtn'), left = st.bonus.left;
+  $('bPer').textContent = st.bonus.amount;
+  $('bLeft').textContent = left;
+  if (left <= 0) { b.disabled = true; b.textContent = 'Come back tomorrow'; return; }
+  if (busy) { b.disabled = true; return; }
+  if (!bonusTok) { b.disabled = true; b.textContent = 'Preparing…'; return; }
+  b.disabled = false; b.textContent = `Open offer · +${st.bonus.amount} USDT`;
+}
+async function bonusPrep() {
+  if (!cfg.bonus || bonusPrepping || !st || !st.registered || st.bonus.left <= 0) return;
+  bonusPrepping = true;
+  try {
+    if (!cfg.adsOff) await loadSdk();
+    const r = await api('bonus_start', 'POST');
+    if (r.data.token) bonusTok = { token: r.data.token, t: Date.now() };
+    else {
+      if (r.data.balance) { st = r.data; render(); }
+      $('bonusMsg').textContent = { daily_limit: 'No more bonus offers today.', paused: 'Bonus is paused for a moment. Try again soon.' }[r.data.error] || 'Could not prepare. Close and reopen the app.';
+    }
+  } catch (e) { $('bonusMsg').textContent = 'Ads did not load. Close and reopen the app.'; }
+  bonusPrepping = false;
+  updateBonus();
+}
+function bonusEnter() {
+  $('bonusMsg').textContent = '';
+  if (bonusTok && Date.now() - bonusTok.t > 480000) bonusTok = null; // token is about to expire
+  updateBonus();
+  bonusPrep();
+}
+$('bonusBtn').onclick = () => {
+  if (busy || !bonusTok) return;
+  const fn = window['show_' + cfg.adZone];
+  if (!cfg.adsOff && typeof fn !== 'function') { bonusPrep(); return; }
+  const tok = bonusTok.token;
+  bonusTok = null; busy = true; updateBonus();
+  $('bonusMsg').textContent = '';
+  $('bonusBtn').textContent = 'Waiting for the offer…';
+  const uid = tg.initDataUnsafe?.user?.id || 0;
+  const t0 = Date.now();
+  // Must be called straight from the tap (no await before it), or Monetag refuses it.
+  let call;
+  try { call = cfg.adsOff ? Promise.resolve({ reward_event_type: 'valued' }) : fn({ type: 'pop', ymid: 'b' + uid + '-' + t0, requestVar: 'bonus' }); }
+  catch (e) { call = Promise.reject(e); }
+  let seen = null;
+  call.then(async (res) => {
+    seen = res;
+    if (res?.reward_event_type !== 'valued') throw new Error('not_valued');
+    if (!cfg.adsOff && Date.now() - t0 < 3000) throw new Error('too_short');
+    let r;
+    for (let i = 0; i < 8; i++) {
+      r = await api('bonus_claim', 'POST', { token: tok });
+      if (r.data.error !== 'too_fast') break;
+      await sleep(1500);
+    }
+    busy = false;
+    if (r.data.ok) { st = r.data; render(); toast(`+${st.bonus.amount} USDT`); tg.HapticFeedback?.notificationOccurred('success'); }
+    else {
+      $('bonusMsg').textContent = { daily_limit: 'No more bonus offers today.', no_session: 'Session expired. Try again.', expired: 'Session expired. Try again.', paused: 'Bonus is paused for a moment.' }[r.data.error] || 'Bonus failed. Try again.';
+      if (r.data.balance) { st = r.data; render(); }
+    }
+  }).catch((e) => {
+    busy = false;
+    const m = e && e.message;
+    const info = seen ? ' [' + (seen.event_type || 'no event') + ' / ' + (seen.reward_event_type || 'no reward type') + ']' : (m === 'not_valued' ? ' [no data from Monetag]' : '');
+    $('bonusMsg').textContent = m === 'not_valued' || m === 'too_short'
+      ? 'This offer did not count. Tap again to try another one.' + info
+      : 'Could not confirm the offer' + (m ? ' (' + m + ')' : '') + '. Stay on the offer page about 15 seconds, then come back.';
+  }).finally(() => { bonusPrep(); updateBonus(); });
+};
+
+/* ---- withdraw ---- */
+$('wdBtn').onclick = async () => {
+  $('wdBtn').disabled = true;
+  const r = await api('withdraw', 'POST', {});
+  const e = { below_min: `Balance is below ${st.minWithdraw} USDT.`, pending_exists: 'You already have a payout in progress.', paused: 'Withdrawals are paused for a moment. Try again soon.' };
+  if (r.data.ok) {
+    st = r.data; render();
+    const w = st.withdrawals[0];
+    toast(w && w.status === 'paid' ? 'Paid! Check FaucetPay ✓' : 'Processing, it will complete shortly');
+  } else {
+    if (r.data.balance) { st = r.data; render(); }
+    toast(e[r.data.error] || 'Request failed');
+  }
+};
+
+/* ---- tabs ---- */
+document.querySelectorAll('.tab').forEach((b) => b.onclick = () => {
+  document.querySelectorAll('.tab').forEach((x) => x.classList.toggle('on', x === b));
+  for (const p of ['pClaim', 'pTasks', 'pBonus', 'pOwner', 'pWallet']) $(p).classList.toggle('hide', p !== b.dataset.t);
+  if (b.dataset.t === 'pTasks') loadTasks();
+  if (b.dataset.t === 'pBonus') bonusEnter();
+  if (b.dataset.t === 'pOwner') oGo(oTab);
+});
+function setTabs() {
+  $('tabTasks').classList.toggle('hide', !cfg.tasks);
+  $('tabBonus').classList.toggle('hide', !cfg.bonus);
+  $('tabOwner').classList.toggle('hide', !isOwner);
+  const n = document.querySelectorAll('.tab:not(.hide)').length;
+  $('tabs').firstElementChild.style.gridTemplateColumns = `repeat(${n}, 1fr)`;
+}
+
+/* ---- coupon (users) ---- */
+$('cpBtn').onclick = async () => {
+  const code = $('cpIn').value.trim();
+  if (!code) { toast('Enter a code'); return; }
+  $('cpBtn').disabled = true;
+  const r = await api('coupon', 'POST', { code });
+  $('cpBtn').disabled = false;
+  if (r.data.ok) { st = r.data; render(); $('cpIn').value = ''; toast(`+${r.data.reward} USDT`); tg.HapticFeedback?.notificationOccurred('success'); return; }
+  toast({ invalid: 'Invalid code.', expired: 'This code has expired.', used_up: 'This code has been fully used.', already: 'You already used this code.',
+          too_many: 'Too many wrong tries. Try again in an hour.', paused: 'Coupons are paused for a moment.', not_registered: 'Sign in first.' }[r.data.error] || 'Could not redeem. Try again.');
+};
+
+/* ---- owner dashboard ---- */
+let oTab = 'stats';
+const when = (t) => t ? new Date(t * 1000).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—';
+const left = (t) => { const s = t - Math.floor(Date.now() / 1000); if (s <= 0) return 'expired'; const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60); return `${h}h ${m}m left`; };
+document.querySelectorAll('#oSeg button').forEach((b) => b.onclick = () => oGo(b.dataset.o));
+function oGo(t) {
+  oTab = t;
+  document.querySelectorAll('#oSeg button').forEach((x) => x.classList.toggle('on', x.dataset.o === t));
+  $('oBody').innerHTML = '<div class="empty">Loading…</div>';
+  ({ stats: oStats, users: () => oUsers(''), coupons: oCoupons, payouts: oPayouts, message: oMessage })[t]();
+}
+const oFail = (r) => { $('oBody').innerHTML = `<div class="card"><div class="empty">${r.status === 500 ? 'Server error. Did you run owner.sql in phpMyAdmin?' : 'Could not load. Try again.'}</div></div>`; };
+
+async function oStats() {
+  const r = await api('o_stats'); if (r.status !== 200) return oFail(r);
+  const d = r.data;
+  const kv = (l, v) => `<div><small>${l}</small><b class="mono">${v}</b></div>`;
+  $('oBody').innerHTML = `<div class="card"><div class="kv">
+      ${kv('Users', d.users)}${kv('Signed in', d.registered)}${kv('New today', d.newToday)}${kv('Suspended', d.banned)}
+      ${kv('Claims today', d.claimsToday)}${kv('Claims total', d.claims)}${kv('Users hold (owed)', d.owed + ' USDT')}${kv('Earned by claims', d.earnedByClaims + ' USDT')}
+      ${kv('Paid out', d.paidTotal + ' USDT')}${kv('Payouts', d.paidCount)}${kv('Pending payouts', d.pendingCount + ' · ' + d.pendingTotal)}${kv('Active coupons', d.activeCoupons)}
+    </div></div>
+    <div class="card"><h2 style="font-size:17px;margin-bottom:4px">Emergency controls</h2>
+      <div class="sw"><span>Pause claims &amp; coupons</span><button class="btn sm ${d.pause ? '' : 'ghost'}" data-set="pause" data-v="${d.pause ? 0 : 1}">${d.pause ? 'Paused · Resume' : 'Pause'}</button></div>
+      <div class="sw"><span>Pause withdrawals</span><button class="btn sm ${d.pauseWithdraw ? '' : 'ghost'}" data-set="pause_withdraw" data-v="${d.pauseWithdraw ? 0 : 1}">${d.pauseWithdraw ? 'Paused · Resume' : 'Pause'}</button></div>
+    </div>`;
+  $('oBody').querySelectorAll('[data-set]').forEach((b) => b.onclick = async () => {
+    b.disabled = true;
+    const x = await api('o_setting', 'POST', { name: b.dataset.set, value: Number(b.dataset.v) });
+    toast(x.data.ok ? 'Saved' : 'Failed'); oStats();
+  });
+}
+
+async function oUsers(q) {
+  const r = await api('o_users' + (q ? '&q=' + encodeURIComponent(q) : '')); if (r.status !== 200) return oFail(r);
+  $('oBody').innerHTML = `<div class="card"><div style="display:flex;gap:8px"><input id="oQ" type="text" placeholder="Search ID, @username, email" value="${esc(q)}"><button class="btn sm" id="oQb">Search</button></div></div>
+    <div class="card">${r.data.users.length ? r.data.users.map((u) =>
+      `<div class="urow" data-id="${u.id}"><div class="l1"><span>${esc(u.name || '—')} ${u.username ? '@' + esc(u.username) : ''}</span><span class="pill ${u.banned ? 'failed' : 'paid'}">${u.banned ? 'suspended' : 'active'}</span></div>
+       <div class="l2">${u.id} · ${esc(u.email || 'no email')} · ${u.claims} claims · ${u.balance} USDT</div></div>`).join('') : '<div class="empty">No users found</div>'}</div>`;
+  $('oQb').onclick = () => oUsers($('oQ').value.trim());
+  $('oQ').onkeydown = (e) => { if (e.key === 'Enter') oUsers($('oQ').value.trim()); };
+  $('oBody').querySelectorAll('.urow').forEach((x) => x.onclick = () => oUser(x.dataset.id));
+}
+
+async function oUser(id) {
+  const r = await api('o_user&id=' + id); if (r.status !== 200) return oFail(r);
+  const u = r.data.user, kv = (l, v) => `<div><small>${l}</small><b class="mono">${v}</b></div>`;
+  $('oBody').innerHTML = `<button class="btn ghost sm" id="oBack" style="margin-bottom:12px">← Back</button>
+    <div class="card"><h2 style="font-size:18px;margin-bottom:2px">${esc(u.name || '—')} ${u.username ? '@' + esc(u.username) : ''}</h2>
+      <p class="sub" style="margin-bottom:12px">ID ${u.id} · ${esc(u.email || 'no email')}<br>Joined ${when(u.joined)}</p>
+      <div class="kv">
+        ${kv('Status', u.banned ? 'Suspended' : 'Active')}${kv('Balance', u.balance + ' USDT')}
+        ${kv('Claims total', u.claims)}${kv('Claims today', u.claimsToday)}
+        ${kv('Last claim', when(u.lastClaim))}${kv('Total earned', u.totalEarned + ' USDT')}
+        ${kv('Withdrawals', u.withdrawals + ' · ' + u.withdrawn)}${kv('Coupons used', u.coupons + ' · ' + u.couponTotal)}
+        ${kv('Captcha strikes', u.strikes)}${kv('Others on same IP', u.sameIp)}
+      </div>
+      <button class="btn ${u.banned ? '' : 'ghost'}" id="oBan" style="margin-top:14px">${u.banned ? 'Unsuspend account' : 'Suspend account'}</button>
+    </div>`;
+  $('oBack').onclick = () => oUsers('');
+  $('oBan').onclick = async () => {
+    if (!u.banned && !confirm('Suspend this account?')) return;
+    $('oBan').disabled = true;
+    const x = await api('o_ban', 'POST', { id: Number(u.id), banned: u.banned ? 0 : 1 });
+    toast(x.data.ok ? (u.banned ? 'Unsuspended ✓' : 'Suspended') : (x.data.error === 'self' ? 'You cannot suspend yourself' : 'Failed')); oUser(id);
+  };
+}
+
+async function oCoupons(fresh) {
+  const r = await api('o_coupons'); if (r.status !== 200) return oFail(r);
+  const stat = (c) => !c.active ? ['off', 'processing'] : c.expires * 1000 < Date.now() ? ['expired', 'failed'] : c.used >= c.max ? ['full', 'failed'] : ['active', 'paid'];
+  $('oBody').innerHTML = `<div class="card"><h2 style="font-size:17px;margin-bottom:4px">New coupon</h2>
+      <p class="sub" style="margin-bottom:10px">Expires 24 hours after you create it. Cost = reward × uses.</p>
+      <div style="display:flex;gap:8px;margin-bottom:10px"><input id="cAmt" type="text" inputmode="decimal" placeholder="Reward (USDT)" value="0.001"><input id="cUses" type="text" inputmode="numeric" placeholder="Uses" value="10"></div>
+      <button class="btn" id="cNew">Generate coupon</button>
+      ${fresh ? `<div class="code mono" id="cCode">${esc(fresh.code)}</div><p class="sub" style="text-align:center;margin:0 0 10px">${fresh.amount} USDT × ${fresh.uses} uses · expires in 24h</p><button class="btn ghost" id="cCopy">Copy code</button>` : ''}
+    </div>
+    <div class="card"><h2 style="font-size:17px;margin-bottom:4px">Recent coupons</h2>${r.data.coupons.length ? r.data.coupons.map((c) => { const [t, cls] = stat(c);
+      return `<div class="urow" style="cursor:default"><div class="l1"><span class="mono">${esc(c.code)}</span><span class="pill ${cls}">${t}</span></div>
+        <div class="l2">${c.amount} USDT · used ${c.used}/${c.max} · ${left(c.expires)} ${t === 'active' ? `· <a href="#" data-off="${c.id}" style="color:var(--bad)">disable</a>` : ''}</div></div>`; }).join('') : '<div class="empty">No coupons yet</div>'}</div>`;
+  $('cNew').onclick = async () => {
+    const amount = parseFloat($('cAmt').value.replace(',', '.')), uses = parseInt($('cUses').value, 10);
+    if (!(amount >= 0.0001 && amount <= 5)) { toast('Reward must be 0.0001 to 5 USDT'); return; }
+    if (!(uses >= 1 && uses <= 1000)) { toast('Uses must be 1 to 1000'); return; }
+    $('cNew').disabled = true;
+    const x = await api('o_coupon_new', 'POST', { amount, uses });
+    if (x.data.ok) { toast('Coupon created'); oCoupons(x.data); } else { toast('Could not create'); $('cNew').disabled = false; }
+  };
+  if (fresh) $('cCopy').onclick = async () => { try { await navigator.clipboard.writeText(fresh.code); toast('Copied'); } catch (e) { toast('Press and hold the code to copy'); } };
+  $('oBody').querySelectorAll('[data-off]').forEach((a) => a.onclick = async (e) => {
+    e.preventDefault(); if (!confirm('Disable this coupon?')) return;
+    await api('o_coupon_off', 'POST', { id: Number(a.dataset.off) }); oCoupons();
+  });
+}
+
+async function oMessage() {
+  $('oBody').innerHTML = `<div class="card"><h2 style="font-size:17px;margin-bottom:4px">Message to all users</h2>
+    <p class="sub" style="margin-bottom:10px">Type a text to the bot in the Telegram chat, then tap <b>Load from bot chat</b>. Or write it here.</p>
+    <button class="btn ghost" id="bcLoad" style="margin-bottom:10px">Load from bot chat</button>
+    <textarea id="bcText" maxlength="1000" rows="5" placeholder="Your message…" style="width:100%;padding:14px 16px;border-radius:14px;border:1px solid var(--line);background:var(--surface2);color:var(--text);font:inherit;resize:vertical"></textarea>
+    <div class="note" id="bcInfo">Only users who have started the bot can receive it. Each message has an “Open faucet” button.</div>
+    <button class="btn" id="bcSend" style="margin-top:12px">Send to everyone</button>
+    <div class="msg" id="bcProg"></div></div>`;
+  let upd = null, total = 0;
+  $('bcLoad').onclick = async () => {
+    $('bcLoad').disabled = true;
+    const r = await api('o_bc_fetch'); $('bcLoad').disabled = false;
+    if (r.status !== 200) { toast('Could not read the bot chat' + (r.data.detail ? ': ' + r.data.detail : '')); return; }
+    total = r.data.total;
+    if (!r.data.message) { toast('No new text found. Send one to the bot chat first.'); return; }
+    $('bcText').value = r.data.message.text; upd = r.data.message.update_id; toast('Loaded your last message');
+  };
+  $('bcSend').onclick = async () => {
+    const text = $('bcText').value.trim();
+    if (!text) { toast('Write a message first'); return; }
+    if (!confirm('Send this message to all users?')) return;
+    $('bcSend').disabled = true; $('bcLoad').disabled = true;
+    let after = 0, sent = 0, failed = 0, ok = true, lastErr = '';
+    for (let guard = 0; guard < 500; guard++) {
+      const r = await api('o_bc_send', 'POST', { text, after });
+      if (r.status !== 200) { ok = false; $('bcProg').textContent = 'Stopped: ' + (r.data.error || 'server error') + `. Sent ${sent}.`; break; }
+      sent += r.data.sent; failed += r.data.failed; after = r.data.next; if (r.data.err) lastErr = r.data.err;
+      $('bcProg').textContent = `Sent ${sent} · not delivered ${failed}…`;
+      if (r.data.wait) await sleep((r.data.wait + 1) * 1000);
+      if (r.data.done) break;
+    }
+    if (ok) {
+      $('bcProg').textContent = `Done. Delivered ${sent}, not delivered ${failed}.` + (failed && lastErr ? ` Reason: ${lastErr}` : '');
+      if (upd !== null) { await api('o_bc_ack', 'POST', { update_id: upd }); upd = null; }
+      toast('Message sent');
+    }
+    $('bcSend').disabled = false; $('bcLoad').disabled = false;
+  };
+}
+
+async function oPayouts() {
+  const r = await api('o_withdrawals'); if (r.status !== 200) return oFail(r);
+  $('oBody').innerHTML = `<div class="card"><h2 style="font-size:17px;margin-bottom:4px">Latest payouts</h2>${r.data.items.length ? r.data.items.map((w) =>
+    `<div class="urow" style="cursor:default"><div class="l1"><span class="mono">#${w.id} · ${w.amount} USDT</span><span class="pill ${w.status}">${w.status}</span></div>
+     <div class="l2">${w.username ? '@' + esc(w.username) : w.user} · ${esc(w.to)} · ${when(w.at)}${w.note ? ' · ' + esc(w.note) : ''}</div></div>`).join('') : '<div class="empty">No payouts yet</div>'}</div>`;
+}
+
+/* ---- tasks ---- */
+let tasks = null, tRun = {};
+try { tRun = JSON.parse(localStorage.getItem('tasks_v1') || '{}') || {}; } catch (e) { tRun = {}; }
+const saveRun = () => { try { localStorage.setItem('tasks_v1', JSON.stringify(tRun)); } catch (e) {} };
+const esc = (x) => String(x).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+async function loadTasks() {
+  const r = await api('tasks');
+  if (r.status === 200) { tasks = r.data.tasks; renderTasks(); }
+  else if (!tasks) $('taskList').innerHTML = '<div class="empty">Could not load tasks. Try again.</div>';
+}
+function renderTasks() {
+  if (!tasks) return;
+  if (!tasks.length) { $('taskList').innerHTML = '<div class="empty">No tasks right now. Check back soon.</div>'; return; }
+  $('taskList').innerHTML = tasks.map((t) => {
+    let label = 'Start', dis = '', act = 'start';
+    const run = tRun[t.id];
+    if (t.done) { label = 'Done ✓'; dis = 'disabled'; act = ''; }
+    else if (run) {
+      const left = run.wait - Math.floor((Date.now() - run.t0) / 1000);
+      if (left > 0) { label = `Wait ${left}s`; dis = 'disabled'; act = ''; } else { label = 'Claim'; act = 'claim'; }
+    }
+    return `<div class="task"><div class="ti"><b>${esc(t.title)}</b><span>${esc(t.description)}</span><span class="rw mono">+${t.reward} USDT</span></div>` +
+      `<button class="btn${t.done ? ' ghost' : ''}" data-id="${t.id}" data-act="${act}" ${dis}>${label}</button></div>`;
+  }).join('');
+}
+setInterval(() => { if (tasks && !$('pTasks').classList.contains('hide') && Object.keys(tRun).length) renderTasks(); }, 1000);
+
+$('taskList').onclick = async (e) => {
+  const b = e.target.closest('button'); if (!b || !b.dataset.act || busy) return;
+  const id = b.dataset.id, t = tasks.find((x) => String(x.id) === id);
+  busy = true; b.disabled = true;
+  if (b.dataset.act === 'start') {
+    const r = await api('task_start', 'POST', { id: Number(id) });
+    busy = false;
+    if (!r.data.token) { toast(r.data.error === 'already_done' ? 'Already completed' : 'Could not start. Try again.'); loadTasks(); return; }
+    tRun[id] = { token: r.data.token, t0: Date.now(), wait: r.data.wait }; saveRun(); renderTasks();
+    try {
+      if (/^https:\/\/t\.me\//.test(r.data.url)) tg.openTelegramLink(r.data.url); else tg.openLink(r.data.url);
+    } catch (err) { window.open(r.data.url, '_blank'); }
+    return;
+  }
+  const r = await api('task_claim', 'POST', { token: tRun[id].token });
+  busy = false;
+  if (r.data.ok) {
+    delete tRun[id]; saveRun(); st = r.data; tasks = r.data.tasks; render(); renderTasks();
+    toast(`+${r.data.reward} USDT`); tg.HapticFeedback?.notificationOccurred('success'); return;
+  }
+  const m = { too_fast: 'Stay a little longer, then claim.', not_member: 'Join the channel first, then claim.', verify_failed: 'Could not verify. Try again in a minute.',
+              expired: 'Session expired. Start the task again.', no_session: 'Start the task again.', already_done: 'Already completed.' };
+  if (['expired', 'no_session', 'already_done'].includes(r.data.error)) { delete tRun[id]; saveRun(); }
+  if (r.data.error === 'too_fast' && r.data.left) tRun[id].t0 = Date.now() - (tRun[id].wait - r.data.left) * 1000;
+  toast(m[r.data.error] || 'Claim failed'); loadTasks();
+};
+
+(async () => {
+  // Load ad settings first. Without them nobody gets a reward.
+  for (let i = 0; i < 3 && !(cfg.adZone || cfg.adsOff === true); i++) {
+    try { const r = await api('config'); if (r.data && (r.data.adZone || r.data.adsOff === true)) cfg = r.data; } catch (e) {}
+    if (!(cfg.adZone || cfg.adsOff === true)) await sleep(800);
+  }
+  await load();
+})();
+</script>
+</body>
+</html>

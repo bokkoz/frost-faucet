@@ -13,7 +13,7 @@ async function route(a, req, ctx) {
   const withState = async (uid, body, code) => R(body, code, uid);
 
   if (a === 'config') {
-    return R({ adZone: cfg.zone(), adSrc: cfg.sdkSrc(), adsOff: cfg.zone() === '', inapp: cfg.inapp(), tasks: false, bonus: cfg.bonus(), brand: cfg.brand() });
+    return R({ adZone: cfg.zone(), adSrc: cfg.sdkSrc(), adsOff: cfg.zone() === '', inapp: cfg.inapp(), tasks: false, bonus: cfg.bonus(), brand: cfg.brand(), bot: cfg.botUsername(), theme: cfg.themeData() });
   }
 
   if (a === 'me') {

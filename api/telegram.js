@@ -3,10 +3,10 @@ const db = require('../db');
 const L = require('../core');
 const { cfg, now } = L;
 
-const WELCOME = () => `Welcome to ${cfg.brand()} ❄️\n\nWatch short ads, earn USDT, and get paid instantly to your FaucetPay account.\n\nTap the button below to start earning.`;
+const WELCOME = () => `Welcome to ${cfg.brand()} ${cfg.emoji()}\n\nWatch short ads, earn USDT, and get paid instantly to your FaucetPay account.\n\nTap the button below to start earning.`;
 const openBtn = () => {
   const url = cfg.siteUrl();
-  return url ? { inline_keyboard: [[{ text: '❄️ Open App', web_app: { url } }]] } : undefined;
+  return url ? { inline_keyboard: [[{ text: cfg.emoji() + ' Open App', web_app: { url } }]] } : undefined;
 };
 
 async function handleMessage(m) {
